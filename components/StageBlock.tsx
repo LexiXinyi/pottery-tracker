@@ -13,21 +13,33 @@ interface Props {
   photos: Photo[];
   pieceId: string;
   currentStage: StageName;
+  glazeCombo: string | null;
 }
 
-export default function StageBlock({ stage, photos, pieceId, currentStage }: Props) {
+export default function StageBlock({ stage, photos, pieceId, currentStage, glazeCombo }: Props) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [date, setDate] = useState(stage.stage_date ?? new Date().toISOString().split('T')[0]);
+  const [glaze, setGlaze] = useState(glazeCombo ?? '');
 
   const stageIndex = STAGE_ORDER.indexOf(stage.stage_name);
   const currentIndex = STAGE_ORDER.indexOf(currentStage);
   const isCurrent = stage.stage_name === currentStage;
   const isFuture = stageIndex > currentIndex;
   const isCompleted = stage.completed;
+  const isGlazedStage = stage.stage_name === 'glazed';
 
   async function markDone() {
     setSaving(true);
+
+    if (isGlazedStage && glaze.trim() && glaze.trim() !== (glazeCombo ?? '')) {
+      await fetch(`/api/pieces/${pieceId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ glaze_combo: glaze.trim() }),
+      });
+    }
+
     await fetch(`/api/pieces/${pieceId}/stages`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -39,10 +51,7 @@ export default function StageBlock({ stage, photos, pieceId, currentStage }: Pro
 
   return (
     <div className={`relative pl-8 pb-8 last:pb-0 ${isFuture ? 'opacity-40' : ''}`}>
-      {/* Timeline line */}
       <div className="absolute left-2.5 top-3 bottom-0 w-0.5 bg-stone-200 last:hidden" />
-
-      {/* Dot */}
       <div className={`absolute left-0 top-2 w-5 h-5 rounded-full border-2 flex items-center justify-center
         ${isCompleted ? 'bg-green-500 border-green-500' : isCurrent ? 'bg-white border-stone-800' : 'bg-white border-stone-300'}`}>
         {isCompleted && (
@@ -73,10 +82,27 @@ export default function StageBlock({ stage, photos, pieceId, currentStage }: Pro
           )}
         </div>
 
+        {isGlazedStage && !isFuture && (
+          <div className="mt-3">
+            <label className="text-xs text-stone-600 font-medium block mb-1">
+              Glaze combination
+            </label>
+            <Input
+              value={glaze}
+              onChange={(e) => setGlaze(e.target.value)}
+              placeholder="e.g. Celadon over Shino"
+              disabled={isCompleted}
+              className="h-8 text-sm"
+            />
+          </div>
+        )}
+
         {!isFuture && (
           <div className="mt-3">
             <PhotoGallery photos={photos} />
-            {!isFuture && <div className="mt-2"><PhotoUploader pieceId={pieceId} stageName={stage.stage_name} /></div>}
+            <div className="mt-2">
+              <PhotoUploader pieceId={pieceId} stageName={stage.stage_name} />
+            </div>
           </div>
         )}
       </div>

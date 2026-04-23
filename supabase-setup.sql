@@ -55,3 +55,11 @@ ALTER TABLE photos ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow all" ON pieces FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all" ON stages FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all" ON photos FOR ALL USING (true) WITH CHECK (true);
+
+-- 6. Storage policies — allow anon uploads/reads/deletes on pottery-photos bucket
+CREATE POLICY "Anon upload" ON storage.objects FOR INSERT TO anon
+  WITH CHECK (bucket_id = 'pottery-photos');
+CREATE POLICY "Anon read" ON storage.objects FOR SELECT TO anon
+  USING (bucket_id = 'pottery-photos');
+CREATE POLICY "Anon delete" ON storage.objects FOR DELETE TO anon
+  USING (bucket_id = 'pottery-photos');

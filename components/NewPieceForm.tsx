@@ -1,102 +1,181 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { getClient, BUCKET } from '@/lib/supabase';
 
 export default function NewPieceForm() {
   const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
+  const [clayType, setClayType] = useState('');
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState('');
   const [error, setError] = useState('');
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const selected = e.target.files;
+    if (!selected?.length) return;
+
+    const newFiles = [...files, ...Array.from(selected)];
+    setFiles(newFiles);
+    setPreviews(newFiles.map((f) => URL.createObjectURL(f)));
+    setError('');
+  }
+
+  function removeFile(index: number) {
+    URL.revokeObjectURL(previews[index]);
+    const newFiles = files.filter((_, i) => i !== index);
+    const newPreviews = previews.filter((_, i) => i !== index);
+    setFiles(newFiles);
+    setPreviews(newPreviews);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!clayType.trim()) {
+      setError('Clay body is required.');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
-    const form = e.currentTarget;
-    const data = {
-      name: (form.elements.namedItem('name') as HTMLInputElement).value.trim() || undefined,
-      clay_type: (form.elements.namedItem('clay_type') as HTMLInputElement).value.trim(),
-      glaze_combo: (form.elements.namedItem('glaze_combo') as HTMLInputElement).value.trim() || undefined,
-      notes: (form.elements.namedItem('notes') as HTMLTextAreaElement).value.trim() || undefined,
-      thrown_date: (form.elements.namedItem('thrown_date') as HTMLInputElement).value || undefined,
-    };
-
     try {
+      setProgress('Creating piece…');
       const res = await fetch('/api/pieces', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ clay_type: clayType.trim() }),
       });
       if (!res.ok) throw new Error('Failed to create piece');
       const { piece } = await res.json();
+
+      if (files.length > 0) {
+        const db = getClient();
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          setProgress(`Uploading photo ${i + 1} of ${files.length}…`);
+          const sanitized = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+          const path = `${piece.id}/thrown/${Date.now()}-${sanitized}`;
+
+          const { error: uploadError } = await db.storage
+            .from(BUCKET)
+            .upload(path, file, { upsert: false, contentType: file.type });
+          if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
+
+          const { error: insertError } = await db.from('photos').insert({
+            piece_id: piece.id,
+            stage_name: 'thrown',
+            storage_path: path,
+            original_name: file.name,
+          });
+          if (insertError) throw new Error(`Save failed: ${insertError.message}`);
+        }
+      }
+
       router.push(`/pieces/${piece.id}`);
-    } catch {
-      setError('Something went wrong. Please try again.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong');
       setLoading(false);
     }
   }
 
+  const hasPhotos = files.length > 0;
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-5 bg-white rounded-xl border border-stone-200 p-6">
-      <div className="space-y-1.5">
-        <Label htmlFor="name">Name <span className="text-stone-400 font-normal">(optional)</span></Label>
-        <Input id="name" name="name" placeholder="e.g. Bowl #3, Yunomi" />
-      </div>
-
-      <div className="space-y-1.5">
-        <Label htmlFor="clay_type">Clay Type <span className="text-red-400">*</span></Label>
-        <Input
-          id="clay_type"
-          name="clay_type"
-          required
-          placeholder="e.g. Stoneware, Porcelain, B-mix 5"
-          list="clay-suggestions"
+    <div className="space-y-5">
+      <div className="bg-white rounded-xl border border-stone-200 p-6">
+        <Label className="mb-3 block">Photos</Label>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={handleFileSelect}
         />
-        <datalist id="clay-suggestions">
-          <option value="Stoneware" />
-          <option value="Porcelain" />
-          <option value="B-mix 5" />
-          <option value="Raku" />
-          <option value="Earthenware" />
-          <option value="Terracotta" />
-        </datalist>
+
+        {!hasPhotos ? (
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="w-full aspect-[4/3] border-2 border-dashed border-stone-300 rounded-xl flex flex-col items-center justify-center gap-2 hover:bg-stone-50 transition-colors"
+          >
+            <span className="text-4xl">📷</span>
+            <span className="font-medium text-stone-700">Add photos</span>
+            <span className="text-xs text-stone-500">Take a photo or choose from your library</span>
+          </button>
+        ) : (
+          <>
+            <div className="grid grid-cols-3 gap-2">
+              {previews.map((src, i) => (
+                <div key={i} className="relative aspect-square rounded-lg overflow-hidden bg-stone-100 group">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={src} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removeFile(i)}
+                    className="absolute top-1 right-1 bg-black/60 text-white rounded-full w-6 h-6 text-sm flex items-center justify-center leading-none"
+                    aria-label="Remove photo"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => inputRef.current?.click()}
+                className="aspect-square border-2 border-dashed border-stone-300 rounded-lg flex items-center justify-center text-stone-400 hover:bg-stone-50"
+              >
+                <span className="text-2xl">+</span>
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="glaze_combo">Glaze Combination <span className="text-stone-400 font-normal">(optional)</span></Label>
-        <Input id="glaze_combo" name="glaze_combo" placeholder="e.g. Celadon over Shino" />
-      </div>
+      {hasPhotos && (
+        <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-stone-200 p-6 space-y-5">
+          <div className="space-y-1.5">
+            <Label htmlFor="clay_type">Clay body <span className="text-red-400">*</span></Label>
+            <Input
+              id="clay_type"
+              value={clayType}
+              onChange={(e) => setClayType(e.target.value)}
+              placeholder="e.g. Stoneware, Porcelain, B-mix 5"
+              required
+              list="clay-suggestions"
+              autoFocus
+            />
+            <datalist id="clay-suggestions">
+              <option value="Stoneware" />
+              <option value="Porcelain" />
+              <option value="B-mix 5" />
+              <option value="Raku" />
+              <option value="Earthenware" />
+              <option value="Terracotta" />
+            </datalist>
+            <p className="text-xs text-stone-500">Date thrown: today</p>
+          </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="thrown_date">Date Thrown</Label>
-        <Input
-          id="thrown_date"
-          name="thrown_date"
-          type="date"
-          defaultValue={new Date().toISOString().split('T')[0]}
-        />
-      </div>
+          {error && <p className="text-sm text-red-500">{error}</p>}
+          {loading && progress && <p className="text-sm text-stone-600">{progress}</p>}
 
-      <div className="space-y-1.5">
-        <Label htmlFor="notes">Notes <span className="text-stone-400 font-normal">(optional)</span></Label>
-        <Textarea id="notes" name="notes" placeholder="Any notes about this piece..." rows={3} />
-      </div>
-
-      {error && <p className="text-sm text-red-500">{error}</p>}
-
-      <div className="flex gap-3 pt-1">
-        <Button type="submit" disabled={loading} className="flex-1">
-          {loading ? 'Creating...' : 'Create Piece'}
-        </Button>
-        <Button type="button" variant="outline" onClick={() => router.back()}>
-          Cancel
-        </Button>
-      </div>
-    </form>
+          <div className="flex gap-3">
+            <Button type="submit" disabled={loading} className="flex-1">
+              {loading ? 'Saving…' : 'Save Piece'}
+            </Button>
+            <Button type="button" variant="outline" disabled={loading} onClick={() => router.back()}>
+              Cancel
+            </Button>
+          </div>
+        </form>
+      )}
+    </div>
   );
 }

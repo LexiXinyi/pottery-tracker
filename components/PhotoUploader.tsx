@@ -15,32 +15,44 @@ export default function PhotoUploader({ pieceId, stageName }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [error, setError] = useState('');
   const router = useRouter();
 
   async function handleFiles(files: FileList) {
     if (!files.length) return;
     setUploading(true);
+    setError('');
     setProgress(0);
 
     const total = files.length;
     let done = 0;
+    const db = getClient();
 
     for (const file of Array.from(files)) {
       const sanitized = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
       const path = `${pieceId}/${stageName}/${Date.now()}-${sanitized}`;
 
-      const db = getClient();
       const { error: uploadError } = await db.storage
         .from(BUCKET)
-        .upload(path, file, { upsert: false });
+        .upload(path, file, { upsert: false, contentType: file.type });
 
-      if (!uploadError) {
-        await db.from('photos').insert({
-          piece_id: pieceId,
-          stage_name: stageName,
-          storage_path: path,
-          original_name: file.name,
-        });
+      if (uploadError) {
+        setError(`Upload failed: ${uploadError.message}`);
+        setUploading(false);
+        return;
+      }
+
+      const { error: insertError } = await db.from('photos').insert({
+        piece_id: pieceId,
+        stage_name: stageName,
+        storage_path: path,
+        original_name: file.name,
+      });
+
+      if (insertError) {
+        setError(`Save failed: ${insertError.message}`);
+        setUploading(false);
+        return;
       }
 
       done++;
@@ -48,6 +60,7 @@ export default function PhotoUploader({ pieceId, stageName }: Props) {
     }
 
     setUploading(false);
+    if (inputRef.current) inputRef.current.value = '';
     router.refresh();
   }
 
@@ -57,7 +70,6 @@ export default function PhotoUploader({ pieceId, stageName }: Props) {
         ref={inputRef}
         type="file"
         accept="image/*"
-        capture="environment"
         multiple
         className="hidden"
         onChange={(e) => e.target.files && handleFiles(e.target.files)}
@@ -72,6 +84,7 @@ export default function PhotoUploader({ pieceId, stageName }: Props) {
       >
         {uploading ? `Uploading… ${progress}%` : '+ Add Photos'}
       </Button>
+      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
     </div>
   );
 }

@@ -15,6 +15,7 @@ export default function StageTimeline({ piece }: { piece: PieceWithDetails }) {
             photos={photos}
             pieceId={piece.id}
             currentStage={piece.current_stage}
+            glazeCombo={piece.glaze_combo}
           />
         );
       })}
