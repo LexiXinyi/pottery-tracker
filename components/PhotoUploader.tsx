@@ -2,7 +2,6 @@
 
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
 import { getClient, BUCKET } from '@/lib/supabase';
 import { StageName } from '@/lib/types';
 
@@ -74,16 +73,21 @@ export default function PhotoUploader({ pieceId, stageName }: Props) {
         className="hidden"
         onChange={(e) => e.target.files && handleFiles(e.target.files)}
       />
-      <Button
+      <button
         type="button"
-        variant="outline"
-        size="sm"
         disabled={uploading}
         onClick={() => inputRef.current?.click()}
-        className="text-xs"
+        aria-label="Add photo"
+        className="w-20 h-20 rounded-lg border-2 border-dashed border-stone-300 text-stone-400 flex items-center justify-center hover:bg-stone-50 hover:text-stone-600 hover:border-stone-400 active:scale-95 transition-all disabled:opacity-50"
       >
-        {uploading ? `Uploading… ${progress}%` : '+ Add Photos'}
-      </Button>
+        {uploading ? (
+          <span className="text-xs">{progress}%</span>
+        ) : (
+          <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
+          </svg>
+        )}
+      </button>
       {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
     </div>
   );

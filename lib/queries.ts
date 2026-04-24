@@ -50,9 +50,14 @@ export async function createPiece(data: {
   clay_type: string;
   glaze_combo?: string;
   notes?: string;
-  thrown_date?: string;
+  starting_stage?: StageName;
+  stage_date?: string;
 }): Promise<Piece> {
   const db = getClient();
+  const startingStage: StageName = data.starting_stage ?? 'thrown';
+  const today = data.stage_date ?? new Date().toISOString().split('T')[0];
+  const startingIndex = STAGE_ORDER.indexOf(startingStage);
+
   const { data: piece, error } = await db
     .from('pieces')
     .insert({
@@ -60,18 +65,18 @@ export async function createPiece(data: {
       clay_type: data.clay_type,
       glaze_combo: data.glaze_combo || null,
       notes: data.notes || null,
-      current_stage: 'thrown',
+      current_stage: startingStage,
     })
     .select()
     .single();
 
   if (error || !piece) throw error ?? new Error('Failed to create piece');
 
-  const stageRows = STAGE_ORDER.map((stage) => ({
+  const stageRows = STAGE_ORDER.map((stage, idx) => ({
     piece_id: piece.id,
     stage_name: stage,
-    stage_date: stage === 'thrown' ? (data.thrown_date ?? new Date().toISOString().split('T')[0]) : null,
-    completed: stage === 'thrown',
+    stage_date: idx <= startingIndex ? today : null,
+    completed: idx <= startingIndex,
   }));
 
   const { error: stageError } = await db.from('stages').insert(stageRows);

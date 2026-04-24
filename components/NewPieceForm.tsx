@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { getClient, BUCKET } from '@/lib/supabase';
+import { StageName, STAGE_ORDER, STAGE_LABELS } from '@/lib/types';
 
 export default function NewPieceForm() {
   const router = useRouter();
@@ -13,6 +14,8 @@ export default function NewPieceForm() {
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [clayType, setClayType] = useState('');
+  const [startingStage, setStartingStage] = useState<StageName>('thrown');
+  const [glazeCombo, setGlazeCombo] = useState('');
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState('');
   const [error, setError] = useState('');
@@ -50,7 +53,11 @@ export default function NewPieceForm() {
       const res = await fetch('/api/pieces', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clay_type: clayType.trim() }),
+        body: JSON.stringify({
+          clay_type: clayType.trim(),
+          starting_stage: startingStage,
+          glaze_combo: startingStage !== 'thrown' && glazeCombo.trim() ? glazeCombo.trim() : undefined,
+        }),
       });
       if (!res.ok) throw new Error('Failed to create piece');
       const { piece } = await res.json();
@@ -61,7 +68,7 @@ export default function NewPieceForm() {
           const file = files[i];
           setProgress(`Uploading photo ${i + 1} of ${files.length}…`);
           const sanitized = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-          const path = `${piece.id}/thrown/${Date.now()}-${sanitized}`;
+          const path = `${piece.id}/${startingStage}/${Date.now()}-${sanitized}`;
 
           const { error: uploadError } = await db.storage
             .from(BUCKET)
@@ -70,7 +77,7 @@ export default function NewPieceForm() {
 
           const { error: insertError } = await db.from('photos').insert({
             piece_id: piece.id,
-            stage_name: 'thrown',
+            stage_name: startingStage,
             storage_path: path,
             original_name: file.name,
           });
@@ -142,6 +149,26 @@ export default function NewPieceForm() {
       {hasPhotos && (
         <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-stone-200 p-6 space-y-5">
           <div className="space-y-1.5">
+            <Label>Current stage</Label>
+            <div className="grid grid-cols-3 gap-2">
+              {STAGE_ORDER.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setStartingStage(s)}
+                  className={`h-9 rounded-md text-sm font-medium border transition-colors ${
+                    startingStage === s
+                      ? 'bg-stone-900 text-white border-stone-900'
+                      : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50'
+                  }`}
+                >
+                  {STAGE_LABELS[s]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
             <Label htmlFor="clay_type">Clay body <span className="text-red-400">*</span></Label>
             <Input
               id="clay_type"
@@ -160,8 +187,20 @@ export default function NewPieceForm() {
               <option value="Earthenware" />
               <option value="Terracotta" />
             </datalist>
-            <p className="text-xs text-stone-500">Date thrown: today</p>
+            <p className="text-xs text-stone-500">Date {STAGE_LABELS[startingStage].toLowerCase()}: today</p>
           </div>
+
+          {startingStage !== 'thrown' && (
+            <div className="space-y-1.5">
+              <Label htmlFor="glaze_combo">Glaze combination</Label>
+              <Input
+                id="glaze_combo"
+                value={glazeCombo}
+                onChange={(e) => setGlazeCombo(e.target.value)}
+                placeholder="e.g. Celadon over Shino"
+              />
+            </div>
+          )}
 
           {error && <p className="text-sm text-red-500">{error}</p>}
           {loading && progress && <p className="text-sm text-stone-600">{progress}</p>}

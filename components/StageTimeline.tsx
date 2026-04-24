@@ -16,6 +16,7 @@ export default function StageTimeline({ piece }: { piece: PieceWithDetails }) {
             pieceId={piece.id}
             currentStage={piece.current_stage}
             glazeCombo={piece.glaze_combo}
+            clayType={piece.clay_type}
           />
         );
       })}

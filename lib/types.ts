@@ -3,9 +3,9 @@ export type StageName = 'thrown' | 'glazed' | 'final';
 export const STAGE_ORDER: StageName[] = ['thrown', 'glazed', 'final'];
 
 export const STAGE_LABELS: Record<StageName, string> = {
-  thrown: 'Thrown',
-  glazed: 'Glazed',
-  final: 'Final',
+  thrown: 'Bisque',
+  glazed: 'Glaze',
+  final: 'Voilà',
 };
 
 export const STAGE_COLORS: Record<StageName, string> = {

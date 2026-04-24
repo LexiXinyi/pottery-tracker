@@ -7,7 +7,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Photo } from '@/lib/types';
 import { getPhotoUrl } from '@/lib/supabase';
 
-export default function PhotoGallery({ photos }: { photos: Photo[] }) {
+export default function PhotoGallery({ photos, append }: { photos: Photo[]; append?: React.ReactNode }) {
   const [lightbox, setLightbox] = useState<Photo | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const router = useRouter();
@@ -18,10 +18,6 @@ export default function PhotoGallery({ photos }: { photos: Photo[] }) {
     await fetch(`/api/photos/${photo.id}`, { method: 'DELETE' });
     setDeleting(null);
     router.refresh();
-  }
-
-  if (!photos.length) {
-    return <p className="text-xs text-stone-400 mt-1">No photos yet</p>;
   }
 
   return (
@@ -47,6 +43,7 @@ export default function PhotoGallery({ photos }: { photos: Photo[] }) {
             </button>
           </div>
         ))}
+        {append}
       </div>
 
       <Dialog open={!!lightbox} onOpenChange={() => setLightbox(null)}>
