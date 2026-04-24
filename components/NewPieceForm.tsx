@@ -1,18 +1,27 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { getClient, BUCKET } from '@/lib/supabase';
 import { StageName, STAGE_ORDER, STAGE_LABELS } from '@/lib/types';
+import { takePendingFiles } from '@/lib/pendingFiles';
 
 export default function NewPieceForm() {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
+
+  useEffect(() => {
+    const pending = takePendingFiles();
+    if (pending.length > 0) {
+      setFiles(pending);
+      setPreviews(pending.map((f) => URL.createObjectURL(f)));
+    }
+  }, []);
   const [clayType, setClayType] = useState('');
   const [startingStage, setStartingStage] = useState<StageName>('thrown');
   const [glazeCombo, setGlazeCombo] = useState('');
