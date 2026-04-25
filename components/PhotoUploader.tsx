@@ -64,7 +64,7 @@ export default function PhotoUploader({ pieceId, stageName }: Props) {
   }
 
   return (
-    <div>
+    <>
       <input
         ref={inputRef}
         type="file"
@@ -88,7 +88,7 @@ export default function PhotoUploader({ pieceId, stageName }: Props) {
           </svg>
         )}
       </button>
-      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
-    </div>
+      {error && <p className="text-xs text-red-500 mt-1 w-full">{error}</p>}
+    </>
   );
 }
