@@ -50,3 +50,14 @@ export interface PieceWithDetails extends Piece {
 export interface PieceWithCover extends Piece {
   cover_url: string | null;
 }
+
+export interface Inspo {
+  id: string;
+  storage_path: string;
+  original_name: string;
+  uploaded_at: string;
+}
+
+export interface InspoWithUrl extends Inspo {
+  url: string;
+}

@@ -1,5 +1,5 @@
 import { getClient, getServiceClient, BUCKET, getPhotoUrl } from './supabase';
-import { Piece, PieceWithDetails, PieceWithCover, Stage, Photo, StageName, STAGE_ORDER } from './types';
+import { Piece, PieceWithDetails, PieceWithCover, Stage, Photo, StageName, STAGE_ORDER, InspoWithUrl } from './types';
 
 export async function getAllPieces(): Promise<PieceWithCover[]> {
   const db = getClient();
@@ -131,6 +131,30 @@ export async function advanceStage(
     .from('pieces')
     .update({ current_stage: stageName })
     .eq('id', pieceId);
+}
+
+export async function getAllInspos(): Promise<InspoWithUrl[]> {
+  const db = getClient();
+  const { data, error } = await db
+    .from('inspos')
+    .select('*')
+    .order('uploaded_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map((i) => ({ ...i, url: getPhotoUrl(i.storage_path) }));
+}
+
+export async function deleteInspo(id: string): Promise<void> {
+  const db = getClient();
+  const { data: inspo, error } = await db
+    .from('inspos')
+    .select('storage_path')
+    .eq('id', id)
+    .single();
+  if (error || !inspo) throw error ?? new Error('Inspo not found');
+
+  const service = getServiceClient();
+  await service.storage.from(BUCKET).remove([inspo.storage_path]);
+  await db.from('inspos').delete().eq('id', id);
 }
 
 export async function deletePhoto(id: string): Promise<void> {
