@@ -21,6 +21,8 @@ export default function NewPieceForm() {
       setFiles(pending);
       setPreviews(pending.map((f) => URL.createObjectURL(f)));
     }
+    const lastClay = typeof window !== 'undefined' ? localStorage.getItem('lastClayType') : null;
+    if (lastClay) setClayType(lastClay);
   }, []);
   const [clayType, setClayType] = useState('');
   const [startingStage, setStartingStage] = useState<StageName>('thrown');
@@ -70,6 +72,9 @@ export default function NewPieceForm() {
       });
       if (!res.ok) throw new Error('Failed to create piece');
       const { piece } = await res.json();
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('lastClayType', clayType.trim());
+      }
 
       if (files.length > 0) {
         const db = getClient();
@@ -185,17 +190,8 @@ export default function NewPieceForm() {
               onChange={(e) => setClayType(e.target.value)}
               placeholder="e.g. Stoneware, Porcelain, B-mix 5"
               required
-              list="clay-suggestions"
               autoFocus
             />
-            <datalist id="clay-suggestions">
-              <option value="Stoneware" />
-              <option value="Porcelain" />
-              <option value="B-mix 5" />
-              <option value="Raku" />
-              <option value="Earthenware" />
-              <option value="Terracotta" />
-            </datalist>
             <p className="text-xs text-stone-500">Date {STAGE_LABELS[startingStage].toLowerCase()}: today</p>
           </div>
 
