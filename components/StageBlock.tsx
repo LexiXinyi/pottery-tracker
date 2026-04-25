@@ -28,6 +28,7 @@ export default function StageBlock({ stage, photos, pieceId, currentStage, glaze
   const isCompleted = stage.completed;
   const isGlazedStage = stage.stage_name === 'glazed';
   const isThrownStage = stage.stage_name === 'thrown';
+  const [expanded, setExpanded] = useState(isCurrent);
 
   async function markDone() {
     setSaving(true);
@@ -62,7 +63,7 @@ export default function StageBlock({ stage, photos, pieceId, currentStage, glaze
 
   async function saveClay() {
     const next = clay.trim();
-    if (!next || next === clayType) return;
+    if (next === clayType) return;
     await fetch(`/api/pieces/${pieceId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -93,29 +94,59 @@ export default function StageBlock({ stage, photos, pieceId, currentStage, glaze
         )}
       </div>
 
-      <div className={`rounded-xl border p-4 ${isCurrent ? 'border-stone-800 bg-white shadow-sm' : 'border-stone-200 bg-white'}`}>
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <h3 className="font-semibold text-stone-800">{STAGE_LABELS[stage.stage_name]}</h3>
-          <div className="flex items-center gap-2">
-            <Input
-              type="date"
-              value={date}
-              onChange={(e) => saveDate(e.target.value)}
-              className="h-7 text-xs w-36 px-2"
-            />
-            {!isCompleted && (
-              <Button size="sm" onClick={markDone} disabled={saving} className="h-7 text-xs">
-                {saving ? 'Saving…' : 'Mark Done'}
-              </Button>
+      <div className={`rounded-xl border ${isCurrent ? 'border-stone-800 bg-white shadow-sm' : 'border-stone-200 bg-white'}`}>
+        <div className="flex items-center justify-between gap-2 p-4">
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="flex items-center gap-2 flex-1 text-left"
+            aria-expanded={expanded}
+          >
+            <svg
+              className={`w-4 h-4 text-stone-400 transition-transform ${expanded ? 'rotate-90' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+            <h3 className="font-semibold text-stone-800">{STAGE_LABELS[stage.stage_name]}</h3>
+            {!expanded && stage.stage_date && (
+              <span className="text-xs text-stone-500">{stage.stage_date}</span>
             )}
-          </div>
+          </button>
+          <button
+            type="button"
+            onClick={markDone}
+            disabled={saving}
+            aria-label={isCompleted ? 'Completed' : 'Mark done'}
+            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+              isCompleted
+                ? 'bg-green-500 border-green-500 text-white'
+                : 'bg-white border-stone-300 text-transparent hover:border-stone-500 hover:text-stone-400'
+            } ${saving ? 'opacity-50' : ''}`}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </button>
         </div>
-        <div className="mt-3">
-          <PhotoGallery
-            photos={photos}
-            append={<PhotoUploader pieceId={pieceId} stageName={stage.stage_name} />}
-          />
-        </div>
+
+        {expanded && (
+          <div className="px-4 pb-4 -mt-1">
+            <div className="flex items-center justify-end gap-2 flex-wrap mb-3">
+              <Input
+                type="date"
+                value={date}
+                onChange={(e) => saveDate(e.target.value)}
+                className="h-7 text-xs w-36 px-2"
+              />
+            </div>
+            <PhotoGallery
+              photos={photos}
+              append={<PhotoUploader pieceId={pieceId} stageName={stage.stage_name} />}
+            />
 
         {isThrownStage && (
           <div className="mt-3">
@@ -144,6 +175,8 @@ export default function StageBlock({ stage, photos, pieceId, currentStage, glaze
               placeholder="e.g. Celadon over Shino"
               className="h-8 text-sm"
             />
+          </div>
+        )}
           </div>
         )}
       </div>

@@ -51,11 +51,6 @@ export default function NewPieceForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!clayType.trim()) {
-      setError('Clay body is required.');
-      return;
-    }
-
     setLoading(true);
     setError('');
 
@@ -72,7 +67,7 @@ export default function NewPieceForm() {
       });
       if (!res.ok) throw new Error('Failed to create piece');
       const { piece } = await res.json();
-      if (typeof window !== 'undefined') {
+      if (typeof window !== 'undefined' && clayType.trim()) {
         localStorage.setItem('lastClayType', clayType.trim());
       }
 
@@ -183,13 +178,12 @@ export default function NewPieceForm() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="clay_type">Clay body <span className="text-red-400">*</span></Label>
+            <Label htmlFor="clay_type">Clay body</Label>
             <Input
               id="clay_type"
               value={clayType}
               onChange={(e) => setClayType(e.target.value)}
               placeholder="e.g. Stoneware, Porcelain, B-mix 5"
-              required
               autoFocus
             />
             <p className="text-xs text-stone-500">Date {STAGE_LABELS[startingStage].toLowerCase()}: today</p>
