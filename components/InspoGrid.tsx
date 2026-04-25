@@ -139,6 +139,9 @@ function Lightbox({
   const inspo = inspos[index];
   const hasPrev = index > 0;
   const hasNext = index < inspos.length - 1;
+  const prevIndex = useRef(index);
+  const direction: 'left' | 'right' = index >= prevIndex.current ? 'right' : 'left';
+  useEffect(() => { prevIndex.current = index; }, [index]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -210,10 +213,11 @@ function Lightbox({
       )}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
+        key={inspo.id}
         src={inspo.url}
         alt={inspo.original_name}
         onClick={(e) => e.stopPropagation()}
-        className="max-w-full max-h-full object-contain"
+        className={`max-w-full max-h-full object-contain ${direction === 'right' ? 'lightbox-slide-from-right' : 'lightbox-slide-from-left'}`}
       />
     </div>
   );
