@@ -12,14 +12,21 @@ export async function getAllPieces(): Promise<PieceWithCover[]> {
 
   const { data: photos } = await db
     .from('photos')
-    .select('piece_id, storage_path')
+    .select('piece_id, stage_name, storage_path, uploaded_at')
     .order('uploaded_at', { ascending: true });
 
-  const coverByPiece: Record<string, string> = {};
+  const stagePriority: Record<string, number> = { thrown: 0, glazed: 1, final: 2 };
+  const bestByPiece: Record<string, { stage: number; path: string }> = {};
   for (const photo of photos ?? []) {
-    if (!coverByPiece[photo.piece_id]) {
-      coverByPiece[photo.piece_id] = getPhotoUrl(photo.storage_path);
+    const stage = stagePriority[photo.stage_name] ?? 0;
+    const current = bestByPiece[photo.piece_id];
+    if (!current || stage > current.stage) {
+      bestByPiece[photo.piece_id] = { stage, path: photo.storage_path };
     }
+  }
+  const coverByPiece: Record<string, string> = {};
+  for (const [pieceId, { path }] of Object.entries(bestByPiece)) {
+    coverByPiece[pieceId] = getPhotoUrl(path);
   }
 
   return (pieces ?? []).map((p) => ({
