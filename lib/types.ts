@@ -51,11 +51,30 @@ export interface PieceWithCover extends Piece {
   cover_url: string | null;
 }
 
+export type InspoStatus = 'inspired' | 'making' | 'commissioned' | 'done';
+
+export const INSPO_STATUS_ORDER: InspoStatus[] = ['inspired', 'making', 'commissioned', 'done'];
+
+export const INSPO_STATUS_LABELS: Record<InspoStatus, string> = {
+  inspired: 'Inspired',
+  making: 'Making',
+  commissioned: 'Commissioned',
+  done: 'Done',
+};
+
+export const INSPO_STATUS_COLORS: Record<InspoStatus, string> = {
+  inspired: 'bg-stone-100 text-stone-700 border-stone-200',
+  making: 'bg-amber-100 text-amber-800 border-amber-200',
+  commissioned: 'bg-violet-100 text-violet-800 border-violet-200',
+  done: 'bg-green-100 text-green-800 border-green-200',
+};
+
 export interface Inspo {
   id: string;
   storage_path: string;
   original_name: string;
   uploaded_at: string;
+  status: InspoStatus;
 }
 
 export interface InspoWithUrl extends Inspo {

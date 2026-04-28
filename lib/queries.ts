@@ -1,5 +1,5 @@
 import { getClient, getServiceClient, BUCKET, getPhotoUrl } from './supabase';
-import { Piece, PieceWithDetails, PieceWithCover, Stage, Photo, StageName, STAGE_ORDER, InspoWithUrl } from './types';
+import { Piece, PieceWithDetails, PieceWithCover, Stage, Photo, StageName, STAGE_ORDER, InspoWithUrl, InspoStatus } from './types';
 
 export async function getAllPieces(): Promise<PieceWithCover[]> {
   const db = getClient();
@@ -148,6 +148,12 @@ export async function getAllInspos(): Promise<InspoWithUrl[]> {
     .order('uploaded_at', { ascending: false });
   if (error) throw error;
   return (data ?? []).map((i) => ({ ...i, url: getPhotoUrl(i.storage_path) }));
+}
+
+export async function updateInspoStatus(id: string, status: InspoStatus): Promise<void> {
+  const db = getClient();
+  const { error } = await db.from('inspos').update({ status }).eq('id', id);
+  if (error) throw error;
 }
 
 export async function deleteInspo(id: string): Promise<void> {
