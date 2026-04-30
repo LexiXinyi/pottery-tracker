@@ -1,10 +1,12 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PieceWithCover } from '@/lib/types';
+import { PieceWithCover, StageName, STAGE_ORDER, STAGE_LABELS } from '@/lib/types';
 import { setPendingFiles } from '@/lib/pendingFiles';
 import PieceCard from './PieceCard';
+
+type StageFilter = 'all' | StageName;
 
 function AddPieceCard() {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -50,12 +52,42 @@ function AddPieceCard() {
 }
 
 export default function PieceGrid({ pieces }: { pieces: PieceWithCover[] }) {
+  const [filter, setFilter] = useState<StageFilter>('all');
+
+  const visible = filter === 'all' ? pieces : pieces.filter((p) => p.current_stage === filter);
+
+  const filterOptions: { value: StageFilter; label: string }[] = [
+    { value: 'all', label: 'All' },
+    ...STAGE_ORDER.map((s) => ({ value: s as StageFilter, label: STAGE_LABELS[s] })),
+  ];
+
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-      <AddPieceCard />
-      {pieces.map((piece) => (
-        <PieceCard key={piece.id} piece={piece} />
-      ))}
-    </div>
+    <>
+      <div className="flex flex-wrap gap-2 mb-4">
+        {filterOptions.map((opt) => {
+          const active = filter === opt.value;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setFilter(opt.value)}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                active
+                  ? 'bg-stone-800 text-white border-stone-800'
+                  : 'bg-white text-stone-700 border-stone-300 hover:bg-stone-50'
+              }`}
+            >
+              {opt.label}
+            </button>
+          );
+        })}
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+        {filter === 'all' && <AddPieceCard />}
+        {visible.map((piece) => (
+          <PieceCard key={piece.id} piece={piece} />
+        ))}
+      </div>
+    </>
   );
 }
