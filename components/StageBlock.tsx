@@ -30,8 +30,20 @@ export default function StageBlock({ stage, photos, pieceId, currentStage, glaze
   const isThrownStage = stage.stage_name === 'thrown';
   const [expanded, setExpanded] = useState(isCurrent);
 
-  async function markDone() {
+  async function toggleDone() {
     setSaving(true);
+
+    if (isCompleted) {
+      // Uncheck: undo the completion (and reset current_stage if needed).
+      await fetch(`/api/pieces/${pieceId}/stages`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stage_name: stage.stage_name, completed: false }),
+      });
+      setSaving(false);
+      router.refresh();
+      return;
+    }
 
     if (isGlazedStage && glaze.trim() && glaze.trim() !== (glazeCombo ?? '')) {
       await fetch(`/api/pieces/${pieceId}`, {
@@ -118,9 +130,10 @@ export default function StageBlock({ stage, photos, pieceId, currentStage, glaze
           </button>
           <button
             type="button"
-            onClick={markDone}
+            onClick={toggleDone}
             disabled={saving}
-            aria-label={isCompleted ? 'Completed' : 'Mark done'}
+            aria-label={isCompleted ? 'Undo completion' : 'Mark done'}
+            title={isCompleted ? 'Undo completion' : 'Mark done'}
             className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
               isCompleted
                 ? 'bg-green-500 border-green-500 text-white'

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { advanceStage } from '@/lib/queries';
+import { advanceStage, uncompleteStage } from '@/lib/queries';
 import { StageName } from '@/lib/types';
 
 export async function PATCH(
@@ -8,16 +8,24 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const { stage_name, stage_date } = await request.json();
+    const { stage_name, stage_date, completed } = await request.json();
 
-    if (!stage_name || !stage_date) {
-      return Response.json({ error: 'stage_name and stage_date are required' }, { status: 400 });
+    if (!stage_name) {
+      return Response.json({ error: 'stage_name is required' }, { status: 400 });
     }
 
-    await advanceStage(id, stage_name as StageName, stage_date);
+    if (completed === false) {
+      await uncompleteStage(id, stage_name as StageName);
+    } else {
+      if (!stage_date) {
+        return Response.json({ error: 'stage_date is required' }, { status: 400 });
+      }
+      await advanceStage(id, stage_name as StageName, stage_date);
+    }
+
     return Response.json({ success: true });
   } catch (err) {
     console.error(err);
-    return Response.json({ error: 'Failed to advance stage' }, { status: 500 });
+    return Response.json({ error: 'Failed to update stage' }, { status: 500 });
   }
 }

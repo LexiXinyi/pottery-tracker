@@ -140,6 +140,34 @@ export async function advanceStage(
     .eq('id', pieceId);
 }
 
+export async function uncompleteStage(
+  pieceId: string,
+  stageName: StageName
+): Promise<void> {
+  const db = getClient();
+  await db
+    .from('stages')
+    .update({ completed: false, stage_date: null })
+    .eq('piece_id', pieceId)
+    .eq('stage_name', stageName);
+
+  // Recompute current_stage from the remaining completed stages.
+  // Falls back to 'thrown' (the default) when nothing is left checked.
+  const { data: remaining } = await db
+    .from('stages')
+    .select('stage_name')
+    .eq('piece_id', pieceId)
+    .eq('completed', true);
+
+  const completedNames = new Set((remaining ?? []).map((s) => s.stage_name as StageName));
+  let newCurrent: StageName = 'thrown';
+  for (const stage of STAGE_ORDER) {
+    if (completedNames.has(stage)) newCurrent = stage;
+  }
+
+  await db.from('pieces').update({ current_stage: newCurrent }).eq('id', pieceId);
+}
+
 export async function getAllInspos(): Promise<InspoWithUrl[]> {
   const db = getClient();
   const { data, error } = await db
