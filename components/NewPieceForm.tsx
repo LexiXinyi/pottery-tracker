@@ -24,6 +24,7 @@ export default function NewPieceForm() {
     const lastClay = typeof window !== 'undefined' ? localStorage.getItem('lastClayType') : null;
     if (lastClay) setClayType(lastClay);
   }, []);
+  const [name, setName] = useState('');
   const [clayType, setClayType] = useState('');
   const [startingStage, setStartingStage] = useState<StageName>('thrown');
   const [glazeCombo, setGlazeCombo] = useState('');
@@ -60,6 +61,7 @@ export default function NewPieceForm() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          name: name.trim() || undefined,
           clay_type: clayType.trim(),
           starting_stage: startingStage,
           glaze_combo: startingStage !== 'thrown' && glazeCombo.trim() ? glazeCombo.trim() : undefined,
@@ -158,6 +160,18 @@ export default function NewPieceForm() {
       {hasPhotos && (
         <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-stone-200 p-6 space-y-5">
           <div className="space-y-1.5">
+            <Label htmlFor="name">Name</Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Banilla bowl, Mug for Mom"
+              autoFocus
+            />
+            <p className="text-xs text-stone-500">Optional — you can name it later too</p>
+          </div>
+
+          <div className="space-y-1.5">
             <Label>Current stage</Label>
             <div className="grid grid-cols-3 gap-2">
               {STAGE_ORDER.map((s) => (
@@ -184,7 +198,6 @@ export default function NewPieceForm() {
               value={clayType}
               onChange={(e) => setClayType(e.target.value)}
               placeholder="e.g. Stoneware, Porcelain, B-mix 5"
-              autoFocus
             />
             <p className="text-xs text-stone-500">Date {STAGE_LABELS[startingStage].toLowerCase()}: today</p>
           </div>
